@@ -106,6 +106,21 @@ class SipusTest extends TestCase
         $this->assertSame(5, Kategori::count());
         $this->assertSame(20, Buku::count());
         $this->assertSame(20, Buku::whereHas('kategori')->count());
+        $this->assertDatabaseHas('bukus', [
+            'isbn' => '9786020000001',
+            'judul' => 'Pemrograman Web dengan Laravel',
+        ]);
+    }
+
+    public function test_book_index_uses_bootstrap_pagination_markup(): void
+    {
+        Buku::factory()->count(11)->create();
+
+        $this->get(route('buku.index'))
+            ->assertOk()
+            ->assertSee('page-item')
+            ->assertSee('page-link')
+            ->assertDontSee('relative inline-flex');
     }
 
     public function test_eager_loading_categories_uses_two_select_queries(): void
