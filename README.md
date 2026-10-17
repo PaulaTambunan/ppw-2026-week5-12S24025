@@ -1,49 +1,45 @@
 # SIPUS-Del
 
-Sistem Informasi Perpustakaan Kampus Del untuk mengelola data kategori dan koleksi buku. Aplikasi menerapkan arsitektur MVC Laravel, relasi Eloquent, validasi server-side, Blade components, pagination, serta eager loading untuk menghindari N+1 query.
+Sistem Informasi Perpustakaan Kampus Del untuk mengelola kategori, koleksi buku, serta sirkulasi peminjaman dan pengembalian. Proyek ini melanjutkan SIPUS-Del Minggu 5 dengan konektivitas basis data, transaksi ACID, Query Builder, dan sesi autentikasi pustakawan sesuai Modul Praktikum Minggu 6.
 
 ## Kebutuhan
 
 - PHP 8.3 atau lebih baru dengan ekstensi PDO SQLite
 - Composer
-- Node.js dan NPM (hanya jika akan membangun aset frontend)
+- Node.js dan NPM jika akan membangun aset frontend
 
-Proyek ini menggunakan Laravel 13 sesuai kerangka aplikasi yang tersedia. Instruksi modul menyebut Laravel 11; implementasi memakai API yang kompatibel dengan struktur proyek saat ini tanpa menurunkan versi framework.
+Proyek menggunakan Laravel 13 sesuai kerangka proyek yang tersedia. Modul menyebut Laravel 11; implementasi mengikuti versi Laravel proyek tanpa menurunkan versi framework.
 
 ## Menjalankan aplikasi
 
-1. Pasang dependensi PHP:
+1. Pasang dependensi:
 
    ```bash
    composer install
    ```
 
-2. Siapkan konfigurasi lokal. Buat `.env` dari contoh hanya jika belum tersedia; jangan timpa konfigurasi lokal yang sudah ada. `.env` tidak boleh di-commit:
+2. Siapkan `.env` dan kunci aplikasi hanya jika berkas lokal belum tersedia. Jangan menimpa konfigurasi lokal:
 
-   ```bash
-   cp .env.example .env  # jalankan hanya bila .env belum ada
-   php artisan key:generate
+   ```powershell
+   if (!(Test-Path .env)) {
+       Copy-Item .env.example .env
+       php artisan key:generate
+   }
    ```
 
-   Pada PowerShell, gunakan `Copy-Item .env.example .env` hanya bila `.env` belum ada.
+3. Pastikan `DB_CONNECTION=sqlite` dan `SESSION_DRIVER=database` pada `.env`. Buat file database SQLite bila belum ada:
 
-3. Pastikan `DB_CONNECTION=sqlite` pada `.env`, lalu buat file database bila belum ada:
-
-   ```bash
-   if (!(Test-Path database/database.sqlite)) { New-Item -ItemType File database/database.sqlite }
+   ```powershell
+   if (!(Test-Path database\database.sqlite)) { New-Item -ItemType File database\database.sqlite }
    ```
 
-   Di macOS/Linux, gunakan `touch database/database.sqlite`.
-
-4. Jalankan migrasi dan isi data contoh:
+4. Jalankan migrasi dan data contoh:
 
    ```bash
    php artisan migrate --seed
    ```
 
-   Seeder membuat 5 kategori dan 20 buku menggunakan factories/Faker. `migrate:fresh --seed` juga tersedia untuk database lokal yang boleh dihapus; perintah itu menghapus seluruh tabel dan data lebih dahulu.
-
-5. Jalankan server:
+5. Jalankan aplikasi:
 
    ```bash
    php artisan serve
@@ -51,46 +47,60 @@ Proyek ini menggunakan Laravel 13 sesuai kerangka aplikasi yang tersedia. Instru
 
    Buka `http://127.0.0.1:8000`.
 
-## Fitur
+## Akun pustakawan uji
 
-- CRUD RESTful untuk buku dan kategori melalui `Route::resource`.
-- Route model binding, validasi ISBN unik, judul minimal 5 karakter, stok non-negatif, kategori yang valid, dan validasi atribut lainnya.
-- Relasi `Kategori hasMany Buku` dan `Buku belongsTo Kategori`.
-- `$fillable` untuk mencegah mass assignment atribut yang tidak diizinkan.
-- Eager loading kategori pada daftar buku dan daftar buku per kategori, dengan pagination 10 data per halaman.
-- Form Blade memakai `@csrf`, method spoofing untuk PUT/DELETE, output escaped, pesan sukses/kesalahan, serta tampilan responsif bertema Del Purple (`#4C1D95`).
-- Penghapusan kategori ditolak selama masih memiliki buku agar data terkait tidak hilang.
+- Email: `pustakawan@del.ac.id`
+- Kata sandi: `password123`
 
-## Migrasi, seeding, dan uji
+Seeder juga membuat contoh buku dengan stok 0 dan stok 1, serta satu transaksi peminjaman aktif. Jalankan `php artisan migrate:fresh --seed` hanya pada database lokal yang boleh dihapus.
+
+## Fitur Minggu 6
+
+- Tabel `peminjamans` menyimpan kode pinjam, buku, NIM dan nama peminjam, tanggal pinjam/jatuh tempo/kembali, serta status. Foreign key buku memakai `cascadeOnDelete`.
+- Model `Buku` memiliki banyak `Peminjaman`; setiap `Peminjaman` memiliki satu `Buku`.
+- Pustakawan dapat mencatat peminjaman. Perubahan stok dan pencatatan pinjam berjalan dalam `DB::transaction()` dengan `lockForUpdate()`. Stok habis dan peminjaman aktif ganda untuk NIM dan buku yang sama ditolak.
+- Pengembalian mengunci data peminjaman dan buku, mengubah status, mengisi tanggal kembali, dan menambah stok dalam satu transaksi.
+- Kesalahan query dicatat ke log Laravel.
+- Katalog menggunakan pencarian judul/penulis/ISBN, filter kategori, `when()`, `withCount('peminjamans')`, dan paginasi yang mempertahankan query pencarian.
+- Statistik katalog memakai `DB::table()` untuk total judul, total stok, peminjaman aktif, dan peminjaman yang sudah dikembalikan.
+- Pengunjung dapat melihat katalog. Login diperlukan untuk menambah, mengubah, dan menghapus buku/kategori, serta mengelola peminjaman.
+- Login menggunakan `Auth::attempt()` dan regenerasi ID sesi. Logout mengakhiri sesi serta meregenerasi token CSRF. Cookie email login `sipus_last_user_email` ditambahkan dengan `Cookie::queue()`; cookie HTTP-only dan SameSite=Lax.
+- Riwayat pencarian terakhir dan NIM peminjam terakhir disimpan dalam sesi.
+
+Relasi data utama:
+
+```text
+kategoris (1) --- (banyak) bukus (1) --- (banyak) peminjamans
+```
+
+## Pengujian
 
 ```bash
-php artisan migrate
-php artisan db:seed
 php artisan test
 ```
 
-Tes fitur memeriksa alur CRUD, validasi, seed data, dan jumlah query eager loading. Pengujian terakhir harus menghasilkan tepat dua SELECT untuk pengambilan daftar buku beserta kategorinya: satu SELECT untuk `bukus`, dan satu SELECT untuk `kategoris`.
+Tes fitur mencakup pencarian/statistik, proteksi login, login/logout, peminjaman dan pengembalian, penolakan saat stok habis, pencegahan peminjaman aktif ganda, serta seeder.
 
-## Audit SQL
+## Bukti pengujian dan cookie
 
-`AppServiceProvider` memasang listener `DB::listen` pada lingkungan lokal dan mencatat SQL beserta durasi ke log Laravel. Setelah menjalankan aplikasi dan membuka daftar buku, periksa:
+Jalankan aplikasi, lalu login dengan akun uji di atas. Ambil dan simpan screenshot untuk dilampirkan saat pengumpulan:
 
-```text
-storage/logs/laravel.log
-```
+1. Peminjaman berhasil dan stok buku berkurang.
+2. Pengembalian berhasil dan stok buku bertambah.
+3. Peminjaman buku dengan stok 0 ditolak.
+4. Browser DevTools → Application/Storage → Cookies: tunjukkan cookie `sipus_last_user_email` dengan atribut `HttpOnly`.
 
-Cari baris berawalan `[SQL AUDIT]`. Pengambilan koleksi di index menggunakan `Buku::with('kategori')`; bukti terukur dua SELECT juga diuji oleh `test_eager_loading_categories_uses_two_select_queries`.
+Untuk demonstrasi konkurensi row-level locking, gunakan MySQL 8 dengan tabel InnoDB. Konfigurasi SQLite bawaan tetap dapat dipakai untuk menjalankan aplikasi dan tes fitur.
 
 ## Pengumpulan
 
-Pastikan `.env` dan `vendor/` tidak dimasukkan ke repositori; keduanya telah dikecualikan di `.gitignore`. Format nama repositori pada modul adalah `ppw-2026-week5-[NIM]`. Ganti `[NIM]` dengan NIM sebelum membuat repositori dan mengumpulkan tugas.
+- Branch tugas: `week6-db-session`.
+- Jangan commit `.env` atau `vendor/`.
+- Gunakan Conventional Commits, misalnya:
 
-Gunakan Conventional Commits untuk riwayat perubahan, misalnya:
-
-```text
-feat(migration): create kategoris and bukus tables schema
-feat(model): define book and category relationships
-feat(controller): implement CRUD actions and server validation
-feat(views): build responsive Blade catalog and forms
-perf(eager-loading): optimize category queries to prevent N+1
-```
+  ```text
+  feat(migration): create peminjamans table
+  feat(transaction): add atomic book borrowing and return
+  feat(query-builder): add catalog filters and library statistics
+  feat(auth-session): add librarian login and session management
+  ```

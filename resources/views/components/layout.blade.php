@@ -246,9 +246,25 @@
                     <span class="brand-caption">PERPUSTAKAAN KAMPUS</span>
                 </span>
             </a>
-            <div class="navbar-nav flex-row gap-1">
-                <a class="nav-link {{ request()->routeIs('buku.*') ? 'active' : '' }}" href="{{ route('buku.index') }}">Koleksi Buku</a>
-                <a class="nav-link {{ request()->routeIs('kategori.*') ? 'active' : '' }}" href="{{ route('kategori.index') }}">Kategori</a>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="navbar-nav flex-row gap-1">
+                    <a class="nav-link {{ request()->routeIs('buku.*') ? 'active' : '' }}" href="{{ route('buku.index') }}">Koleksi Buku</a>
+                    <a class="nav-link {{ request()->routeIs('kategori.*') ? 'active' : '' }}" href="{{ route('kategori.index') }}">Kategori</a>
+                    @auth
+                        <a class="nav-link {{ request()->routeIs('peminjaman.*') ? 'active' : '' }}" href="{{ route('peminjaman.index') }}">Peminjaman</a>
+                    @endauth
+                </div>
+                <div class="navbar-nav flex-row align-items-center gap-1">
+                    @auth
+                        <span class="small text-secondary">{{ auth()->user()->name }}</span>
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button class="nav-link" type="submit">Keluar</button>
+                        </form>
+                    @else
+                        <a class="nav-link {{ request()->routeIs('login') ? 'active' : '' }}" href="{{ route('login') }}">Login Pustakawan</a>
+                    @endauth
+                </div>
             </div>
         </div>
     </nav>

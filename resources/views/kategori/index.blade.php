@@ -7,7 +7,9 @@
                 <p class="hero-copy mb-0">Jelajahi kategori dan temukan buku berdasarkan bidang yang kamu minati.</p>
             </div>
             <div class="col-lg-auto">
-                <a class="btn btn-light fw-semibold rounded-3 px-3 py-2" href="{{ route('kategori.create') }}">+ Tambah kategori</a>
+                @auth
+                    <a class="btn btn-light fw-semibold rounded-3 px-3 py-2" href="{{ route('kategori.create') }}">+ Tambah kategori</a>
+                @endauth
             </div>
         </div>
     </section>
@@ -27,12 +29,14 @@
                         <td>{{ $kategori->bukus_count }}</td>
                         <td class="text-end text-nowrap action-buttons">
                             <a class="btn btn-sm btn-outline-secondary" href="{{ route('kategori.show', $kategori) }}">Detail</a>
-                            <a class="btn btn-sm btn-outline-primary" href="{{ route('kategori.edit', $kategori) }}">Ubah</a>
-                            <form class="d-inline" action="{{ route('kategori.destroy', $kategori) }}" method="POST" onsubmit="return confirm('Hapus kategori ini?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-sm btn-outline-danger" type="submit" @disabled($kategori->bukus_count > 0)>Hapus</button>
-                            </form>
+                            @auth
+                                <a class="btn btn-sm btn-outline-primary" href="{{ route('kategori.edit', $kategori) }}">Ubah</a>
+                                <form class="d-inline" action="{{ route('kategori.destroy', $kategori) }}" method="POST" onsubmit="return confirm('Hapus kategori ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger" type="submit" @disabled($kategori->bukus_count > 0)>Hapus</button>
+                                </form>
+                            @endauth
                         </td>
                     </tr>
                 @empty

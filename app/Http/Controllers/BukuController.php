@@ -6,16 +6,43 @@ use App\Models\Buku;
 use App\Models\Kategori;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BukuController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $bukus = Buku::with('kategori')->latest()->paginate(10);
+        if ($request->filled('search')) {
+            session(['last_buku_search' => $request->input('search')]);
+        }
 
-        return view('buku.index', compact('bukus'));
+        $bukus = Buku::with('kategori')
+            ->withCount('peminjamans')
+            ->when($request->filled('search'), function ($query) use ($request): void {
+                $search = $request->input('search');
+
+                $query->where(function ($query) use ($search): void {
+                    $query->where('judul', 'like', "%{$search}%")
+                        ->orWhere('penulis', 'like', "%{$search}%")
+                        ->orWhere('isbn', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('kategori_id'), fn ($query) => $query->where('kategori_id', $request->input('kategori_id')))
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        $kategoris = Kategori::query()->orderBy('nama_kategori')->get();
+        $stats = [
+            'total_judul' => DB::table('bukus')->count(),
+            'total_stok' => DB::table('bukus')->sum('stok'),
+            'sedang_dipinjam' => DB::table('peminjamans')->where('status', 'dipinjam')->count(),
+            'sudah_dikembalikan' => DB::table('peminjamans')->where('status', 'dikembalikan')->count(),
+        ];
+
+        return view('buku.index', compact('bukus', 'kategoris', 'stats'));
     }
 
     public function create(): View

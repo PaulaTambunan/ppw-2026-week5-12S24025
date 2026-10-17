@@ -5,6 +5,9 @@
     </div>
     <div class="card border-0 shadow-sm"><div class="card-body p-4">
         <h2 class="h3">{{ $buku->judul }}</h2>
+        @auth
+            <a class="btn btn-del mt-2" href="{{ route('peminjaman.create', ['buku_id' => $buku->id]) }}">Pinjam buku</a>
+        @endauth
         <dl class="row mt-4 mb-0">
             <dt class="col-sm-3">ISBN</dt><dd class="col-sm-9">{{ $buku->isbn }}</dd>
             <dt class="col-sm-3">Penulis</dt><dd class="col-sm-9">{{ $buku->penulis }}</dd>

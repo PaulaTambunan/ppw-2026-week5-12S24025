@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Buku;
 use App\Models\Kategori;
+use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,7 @@ class SipusTest extends TestCase
 
     public function test_book_can_be_created_updated_and_deleted(): void
     {
+        $this->actingAs(User::factory()->create());
         $kategori = Kategori::factory()->create();
         $data = [
             'isbn' => '9781234567890',
@@ -57,6 +59,7 @@ class SipusTest extends TestCase
 
     public function test_book_validation_rejects_duplicate_isbn_short_title_and_negative_stock(): void
     {
+        $this->actingAs(User::factory()->create());
         $kategori = Kategori::factory()->create();
         Buku::factory()->create(['isbn' => '9781234567890', 'kategori_id' => $kategori->id]);
 
@@ -76,6 +79,7 @@ class SipusTest extends TestCase
 
     public function test_category_can_be_managed_and_cannot_be_deleted_while_it_has_books(): void
     {
+        $this->actingAs(User::factory()->create());
         $this->post(route('kategori.store'), [
             'kode_kategori' => 'FIK-001',
             'nama_kategori' => 'Fiksi',
@@ -104,8 +108,8 @@ class SipusTest extends TestCase
         $this->seed();
 
         $this->assertSame(5, Kategori::count());
-        $this->assertSame(20, Buku::count());
-        $this->assertSame(20, Buku::whereHas('kategori')->count());
+        $this->assertSame(23, Buku::count());
+        $this->assertSame(23, Buku::whereHas('kategori')->count());
         $this->assertDatabaseHas('bukus', [
             'isbn' => '9786020000001',
             'judul' => 'Pemrograman Web dengan Laravel',
